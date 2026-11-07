@@ -59,7 +59,7 @@ Each result carries `base` (the server URL it came from). `MainScene` drops resu
 
 ## FRM API notes
 
-- Default port 8080. The web server is off until started in game (pause menu → Options → Mods → Ficsit Remote Monitoring → auto-start, or chat `/frm http start`).
+- Default port 8080. The web server is off until started in game (pause menu → Options → Ficsit Remote Monitoring, its own entry in Options, → auto-start, or chat `/frm http start`).
 - `getResourceSink[0].Percent` is 0–1, not 0–100.
 - Milestone and elevator progress come from `Cost[]` / `CurrentPhase[]` using `TotalCost - RemainingCost`.
 - FRM has no endpoint to submit or launch the Space Elevator. Its only write endpoints are `sendChatMessage`, `setSwitches`, `setEnabled`, `createPing` and `setModSetting`.

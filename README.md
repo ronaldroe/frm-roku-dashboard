@@ -69,7 +69,8 @@ The mod's web server is **off by default**, so you need to turn it on.
 
 1. Load your save.
 2. Press **Esc** to open the pause menu.
-3. Choose **Options**, then the **Mods** tab, then **Ficsit Remote Monitoring**.
+3. Choose **Options**, then **Ficsit Remote Monitoring**. The mod has its own entry
+   in the Options menu.
 4. Turn on the web server's **auto-start** setting so it starts every time you load a
    save. Leave the port at **8080** unless something else on your PC already uses it.
 5. Apply the change, then save and reload so the web server starts. Alternatively,
