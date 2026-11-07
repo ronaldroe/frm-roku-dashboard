@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component name="MainScene" extends="Scene">
+  <interface>
+    <field id="config" type="assocarray" onChange="onConfig" />
+  </interface>
+  <script type="text/brightscript" uri="MainScene.brs" />
+  <children>
+    <Rectangle id="bg" width="1920" height="1080" color="0x0F1115FF" />
+    <Group id="ui" />
+  </children>
+</component>

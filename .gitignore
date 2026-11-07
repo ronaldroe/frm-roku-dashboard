@@ -1,0 +1,5 @@
+# Roku dev credentials
+.env
+# Build output
+*.zip
+*.pkg
