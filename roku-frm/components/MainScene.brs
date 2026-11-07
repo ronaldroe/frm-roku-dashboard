@@ -128,11 +128,16 @@ sub init()
     m.pinSep.width = 836 : m.pinSep.height = 2 : m.pinSep.color = C.accent
     m.pinSep.visible = false
 
-    m.hint = lbl(ui, 60, 1052, 1800, 22, false, "0x5A6273FF", "right", "Arrows: explore  ·  OK: pin/unpin item (or refresh)  ·  Play: preview elevator alert")
+    m.hint = lbl(ui, 60, 1052, 1800, 22, false, "0x5A6273FF", "right", "Arrows: explore  ·  OK: pin/unpin item (or refresh)  ·  Play: preview elevator alert  ·  *: server settings")
 
     buildFocusRing(ui)
     buildTooltip(ui)
     buildToast(ui)
+    buildOffline(ui)
+    m.fails = 0
+    m.url = ""
+    m.setup = m.top.findNode("setup")
+    m.setup.observeField("finished", "onSetupFinished")
 
     ' Chime for elevator-ready (Audio node uses the normal TV volume)
     m.audio = m.top.createChild("Audio")
@@ -151,19 +156,88 @@ end sub
 
 sub onConfig()
     cfg = m.top.config
-    m.url = cfg.url
-    m.session.text = "Connecting to " + m.url
-    m.task = CreateObject("roSGNode", "FetchTask")
-    m.task.baseUrl = cfg.url
-    m.task.interval = cfg.interval
-    m.task.observeField("result", "onResult")
-    m.task.control = "RUN"
+    m.interval = cfg.interval
+    url = loadServer()
+    if url = "" then url = normalizeServer(cfg.url) ' optional default from the manifest
+    if url = ""
+        showSetup(false, "", "")
+    else
+        startDashboard(url)
+    end if
+end sub
+
+sub startDashboard(url as String)
+    m.url = url
+    m.data = invalid
+    m.fails = 0
+    m.seWasReady = invalid
+    m.podAway = invalid
+    m.podElapsed = -1
+    m.podSecs = -1
+    m.prodOffset = 0
+    m.offline.visible = false
+    m.session.text = "Connecting to " + hostOf(url)
+    m.status.text = "CONNECTING"
+    m.status.color = m.C.dim
+    if m.task = invalid
+        m.task = CreateObject("roSGNode", "FetchTask")
+        m.task.baseUrl = url
+        m.task.interval = m.interval
+        m.task.observeField("result", "onResult")
+        m.task.control = "RUN"
+    else
+        m.task.baseUrl = url
+    end if
+end sub
+
+sub showSetup(canCancel as Boolean, msg as String, kind as String)
+    m.focusVisible = false
+    updateFocus()
+    m.setup.canCancel = canCancel
+    m.setup.server = m.url
+    m.setup.messageKind = kind
+    if msg = "" then msg = "Choose an option on the left."
+    m.setup.message = msg
+    m.setup.visible = true
+    m.setup.findNode("menu").setFocus(true)
+end sub
+
+sub onSetupFinished()
+    v = m.setup.finished
+    m.setup.visible = false
+    m.top.setFocus(true)
+    if v <> "cancel"
+        saveServer(v)
+        startDashboard(v)
+    end if
+end sub
+
+sub buildOffline(parent as Object)
+    g = parent.createChild("Group")
+    g.translation = [460, 360]
+    g.visible = false
+    sh = g.createChild("Rectangle")
+    sh.translation = [10, 10] : sh.width = 1000 : sh.height = 330 : sh.color = "0x00000099"
+    bg = g.createChild("Rectangle")
+    bg.width = 1000 : bg.height = 330 : bg.color = m.C.tipBg
+    st = g.createChild("Rectangle")
+    st.width = 8 : st.height = 330 : st.color = m.C.bad
+    lbl(g, 50, 36, 900, 44, true, m.C.bad, "", "Can't reach your factory")
+    m.offlineText = lbl(g, 50, 104, 900, 30, false, m.C.text, "", "")
+    m.offlineText.wrap = true
+    lbl(g, 50, 270, 900, 26, false, m.C.dim, "", "Retrying every few seconds  ·  Press * for server settings")
+    m.offline = g
 end sub
 
 ' ================= Input =================
 
 function onKeyEvent(key as String, press as Boolean) as Boolean
+    if m.setup.visible then return false ' setup screen handles its own keys
     if not press then return false
+    if key = "options"
+        showSetup(true, "", "")
+        return true
+    end if
     m.idleTimer.control = "stop"
     m.idleTimer.control = "start"
     if key = "up" or key = "down" or key = "left" or key = "right"
@@ -336,19 +410,29 @@ end sub
 sub onResult()
     d = m.task.result
     C = m.C
+    if d.base <> m.url then return ' stale result from a previous server
     if not d.ok
+        m.fails = m.fails + 1
         m.status.text = "OFFLINE"
         m.status.color = C.bad
-        m.clock.text = "No response from " + m.url + "  ·  " + d.time
+        m.clock.text = "No response from " + hostOf(m.url) + "  ·  " + d.time
         if m.data <> invalid then m.data.ok = false
+        ' Show the panel right away if we've never connected, else after ~3 misses
+        if m.data = invalid or m.fails >= 3
+            m.offlineText.text = errorText(d.errKind, d.errCode, m.url)
+            m.offline.visible = true
+            m.focusVisible = false
+        end if
         updateFocus()
         return
     end if
+    m.fails = 0
+    m.offline.visible = false
     m.data = d
 
     s = d.session
     m.gamePaused = s.paused
-    m.session.text = "Session: " + s.name
+    m.session.text = "Session: " + s.name + "  ·  " + hostOf(m.url)
     if s.paused
         m.status.text = "GAME PAUSED"
         m.status.color = C.warn
@@ -1028,8 +1112,8 @@ sub buildTooltip(parent as Object)
     m.tipRows = []
     for i = 0 to m.TIP_ROWS - 1
         m.tipRows.push({
-            k: lbl(m.tip, 26, 0, 400, 25, false, m.C.text, "", ""),
-            v: lbl(m.tip, 430, 0, m.TIP_W - 456, 25, false, m.C.text, "right", "")
+            k: lbl(m.tip, 26, 0, 340, 25, false, m.C.text, "", ""),
+            v: lbl(m.tip, 370, 0, m.TIP_W - 396, 25, false, m.C.text, "right", "")
         })
     end for
 end sub
@@ -1072,11 +1156,11 @@ sub showTip(t as Object, tip as Object)
             if val = ""
                 r.k.width = m.TIP_W - 52
             else
-                r.k.width = 400
+                r.k.width = 340
             end if
             r.v.text = val
             r.k.translation = [26, y]
-            r.v.translation = [430, y]
+            r.v.translation = [370, y]
             y = y + 36
         else
             r.k.visible = false : r.v.visible = false

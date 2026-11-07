@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component name="SetupScreen" extends="Group">
+  <interface>
+    <field id="server" type="string" onChange="onServer" />
+    <field id="canCancel" type="boolean" value="false" />
+    <field id="message" type="string" onChange="onMessage" alwaysNotify="true" />
+    <field id="messageKind" type="string" value="dim" />
+    <!-- Set when the user is done: a server URL, or "cancel" -->
+    <field id="finished" type="string" alwaysNotify="true" />
+  </interface>
+  <script type="text/brightscript" uri="Common.brs" />
+  <script type="text/brightscript" uri="SetupScreen.brs" />
+</component>

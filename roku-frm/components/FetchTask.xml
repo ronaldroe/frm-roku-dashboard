@@ -6,5 +6,6 @@
     <field id="refreshNow" type="boolean" alwaysNotify="true" />
     <field id="result" type="assocarray" />
   </interface>
+  <script type="text/brightscript" uri="Common.brs" />
   <script type="text/brightscript" uri="FetchTask.brs" />
 </component>

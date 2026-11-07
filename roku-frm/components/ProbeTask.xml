@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component name="ProbeTask" extends="Task">
+  <interface>
+    <field id="mode" type="string" value="test" />
+    <field id="url" type="string" />
+    <field id="port" type="integer" value="8080" />
+    <field id="progress" type="integer" value="0" />
+    <field id="result" type="assocarray" />
+  </interface>
+  <script type="text/brightscript" uri="Common.brs" />
+  <script type="text/brightscript" uri="ProbeTask.brs" />
+</component>

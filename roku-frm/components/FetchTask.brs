@@ -8,12 +8,20 @@ end sub
 sub run()
     port = CreateObject("roMessagePort")
     m.top.observeField("refreshNow", port)
+    m.top.observeField("baseUrl", port)
     base = m.top.baseUrl
     slow = {}
     tick = 0
     recipeDb = invalid
     while true
-        out = { ok: false }
+        if m.top.baseUrl <> base
+            ' Server changed: drop everything from the old one
+            base = m.top.baseUrl
+            slow = {}
+            tick = 0
+            recipeDb = invalid
+        end if
+        out = { ok: false, base: base }
         session = getJson(base + "/getSessionInfo")
         if session <> invalid
             out.ok = true
@@ -48,6 +56,9 @@ sub run()
             tick = tick + 1
         else
             tick = 0 ' refetch slow data as soon as we reconnect
+            code = m.lastCode
+            if code = 200 then out.errKind = "notfrm" else out.errKind = classifyFailure(code)
+            out.errCode = code
         end if
         dt = CreateObject("roDateTime")
         dt.ToLocalTime()
@@ -58,18 +69,9 @@ sub run()
 end sub
 
 function getJson(url as String) as Dynamic
-    xfer = CreateObject("roUrlTransfer")
-    p = CreateObject("roMessagePort")
-    xfer.SetMessagePort(p)
-    xfer.SetUrl(url)
-    xfer.EnableEncodings(true)
-    if not xfer.AsyncGetToString() then return invalid
-    msg = wait(8000, p)
-    if type(msg) = "roUrlEvent"
-        if msg.GetResponseCode() = 200 then return ParseJson(msg.GetString())
-    else
-        xfer.AsyncCancel()
-    end if
+    r = httpGet(url, 8000)
+    m.lastCode = r.code
+    if r.code = 200 then return ParseJson(r.body)
     return invalid
 end function
 
