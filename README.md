@@ -1,5 +1,7 @@
 # FRM Roku Dashboard
 
+[![Donate with PayPal](https://img.shields.io/badge/Donate-PayPal-00457C?logo=paypal&logoColor=white)](https://paypal.me/ronaldroe)
+
 A Roku TV app that shows a live dashboard of your Satisfactory factory: power, milestones,
 the Space Elevator, machines and production. It reads the data served by the
 [Ficsit Remote Monitoring](https://ficsit.app/mod/FicsitRemoteMonitoring) mod.
@@ -214,3 +216,8 @@ deploy.sh                  Package and sideload to the Roku in .env
   same tier to estimate the next one.
 - The server address, pinned items and pod trip times are saved on the Roku and
   survive restarts.
+
+## Support the project
+
+If the dashboard is useful to you, you can buy me a coffee through
+[PayPal](https://paypal.me/ronaldroe). Thank you!
