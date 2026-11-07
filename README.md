@@ -192,6 +192,18 @@ cd roku-frm && zip -r ../frm-roku-dashboard.zip manifest source components image
 
 The Roku's debug console (`telnet <roku-ip> 8085`) shows logs and compile errors.
 
+### Publishing a release
+
+```sh
+./release.sh --dry-run 1.1.0   # check what would happen
+./release.sh 1.1.0             # notes generated from commits
+./release.sh 1.1.0 notes.md    # or notes from a file
+```
+
+The script refuses to run unless `main` is clean and pushed. It sets the version in
+the manifest, commits, tags, pushes, builds `frm-roku-dashboard.zip` and creates the
+GitHub release with it attached. It asks before changing anything.
+
 ### Project layout
 
 ```
@@ -205,6 +217,7 @@ roku-frm/
   components/Common.brs    Shared helpers (HTTP, error messages, saved settings)
   images/, sounds/         Icons, splash, elevator badge, chime
 deploy.sh                  Package and sideload to the Roku in .env
+release.sh                 Version, tag and publish a GitHub release
 ```
 
 ### Notes
