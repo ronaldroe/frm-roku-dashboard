@@ -38,6 +38,8 @@ Studios or the authors of Ficsit Remote Monitoring.
 
 - A Roku device (Roku TV, stick or box) and its remote.
 - A PC running Satisfactory, or a Satisfactory dedicated server.
+- The [Ficsit Remote Monitoring](https://ficsit.app/mod/FicsitRemoteMonitoring) mod,
+  installed with Satisfactory Mod Manager (Step 1 below).
 - The Roku and the game PC (or server) on the same home network.
 
 Setup takes four steps: install the mod, turn on its web server, put the Roku in
