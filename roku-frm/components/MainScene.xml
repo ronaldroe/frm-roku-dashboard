@@ -8,6 +8,7 @@
   <children>
     <Rectangle id="bg" width="1920" height="1080" color="0x0F1115FF" />
     <Group id="ui" />
+    <SettingsScreen id="settings" visible="false" />
     <SetupScreen id="setup" visible="false" />
   </children>
 </component>

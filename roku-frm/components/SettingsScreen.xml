@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component name="SettingsScreen" extends="Group">
+  <interface>
+    <!-- Set before showing, so the menu shows the current server -->
+    <field id="server" type="string" onChange="buildMenu" />
+    <!-- "server" (open server setup) or "done"; on/off settings are saved directly -->
+    <field id="finished" type="string" alwaysNotify="true" />
+  </interface>
+  <script type="text/brightscript" uri="Common.brs" />
+  <script type="text/brightscript" uri="SettingsScreen.brs" />
+</component>

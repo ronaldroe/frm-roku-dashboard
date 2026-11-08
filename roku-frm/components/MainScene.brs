@@ -17,9 +17,13 @@ sub init()
     m.seShowingReady = false
     m.demo = false
     m.MAX_PINS = 5
+    m.MAX_PINNED_ROWS = 10   ' manual + auto-pinned, so a few rows still scroll
     m.pins = loadPins()
+    m.autoMs = loadFlag("autoPinMilestone")
+    m.autoSe = loadFlag("autoPinElevator")
     m.prodView = invalid
     m.prodPinned = 0
+    m.prodAuto = []
     m.prodRest = 0
     ui = m.top.findNode("ui")
     C = m.C
@@ -114,7 +118,7 @@ sub init()
         pmk = pbg.createChild("Rectangle")
         pmk.width = 5 : pmk.height = 40 : pmk.color = C.accent
         r = {
-            pin: pbg,
+            pin: pbg, pinMark: pmk,
             name: lbl(ui, 1020, y, 295, 30, false, C.text, "", ""),
             prod: lbl(ui, 1320, y, 120, 30, false, C.text, "right", ""),
             cons: lbl(ui, 1450, y, 120, 30, false, C.dim, "right", ""),
@@ -128,7 +132,7 @@ sub init()
     m.pinSep.width = 836 : m.pinSep.height = 2 : m.pinSep.color = C.accent
     m.pinSep.visible = false
 
-    m.hint = lbl(ui, 60, 1052, 1800, 22, false, "0x5A6273FF", "right", "Arrows: explore  ·  OK: pin/unpin item (or refresh)  ·  Play: preview elevator alert  ·  *: server settings")
+    m.hint = lbl(ui, 60, 1052, 1800, 22, false, "0x5A6273FF", "right", "Arrows: explore  ·  OK: pin/unpin item (or refresh)  ·  Play: preview elevator alert  ·  *: settings")
 
     buildFocusRing(ui)
     buildTooltip(ui)
@@ -138,6 +142,9 @@ sub init()
     m.url = ""
     m.setup = m.top.findNode("setup")
     m.setup.observeField("finished", "onSetupFinished")
+    m.settings = m.top.findNode("settings")
+    m.settings.observeField("finished", "onSettingsFinished")
+    m.setupFromSettings = false
 
     ' Chime for elevator-ready (Audio node uses the normal TV volume)
     m.audio = m.top.createChild("Audio")
@@ -205,11 +212,43 @@ end sub
 sub onSetupFinished()
     v = m.setup.finished
     m.setup.visible = false
+    fromSettings = m.setupFromSettings
+    m.setupFromSettings = false
+    if v = "cancel" and fromSettings
+        showSettings()
+        return
+    end if
     m.top.setFocus(true)
     if v <> "cancel"
         saveServer(v)
         startDashboard(v)
     end if
+end sub
+
+sub showSettings()
+    m.focusVisible = false
+    updateFocus()
+    m.settings.server = m.url
+    m.settings.visible = true
+    menu = m.settings.findNode("menu")
+    menu.jumpToItem = 0
+    menu.setFocus(true)
+end sub
+
+sub onSettingsFinished()
+    v = m.settings.finished
+    m.settings.visible = false
+    m.autoMs = loadFlag("autoPinMilestone")
+    m.autoSe = loadFlag("autoPinElevator")
+    if v = "server"
+        m.setupFromSettings = true
+        showSetup(true, "", "")
+        return
+    end if
+    m.top.setFocus(true)
+    m.prodOffset = 0
+    if m.data <> invalid and m.data.ok = true then renderProd(m.data.prod)
+    updateFocus()
 end sub
 
 sub buildOffline(parent as Object)
@@ -225,17 +264,17 @@ sub buildOffline(parent as Object)
     lbl(g, 50, 36, 900, 44, true, m.C.bad, "", "Can't reach your factory")
     m.offlineText = lbl(g, 50, 104, 900, 30, false, m.C.text, "", "")
     m.offlineText.wrap = true
-    lbl(g, 50, 270, 900, 26, false, m.C.dim, "", "Retrying every few seconds  ·  Press * for server settings")
+    lbl(g, 50, 270, 900, 26, false, m.C.dim, "", "Retrying every few seconds  ·  Press * for settings")
     m.offline = g
 end sub
 
 ' ================= Input =================
 
 function onKeyEvent(key as String, press as Boolean) as Boolean
-    if m.setup.visible then return false ' setup screen handles its own keys
+    if m.setup.visible or m.settings.visible then return false ' they handle their own keys
     if not press then return false
     if key = "options"
-        showSetup(true, "", "")
+        showSettings()
         return true
     end if
     m.idleTimer.control = "stop"
@@ -512,17 +551,28 @@ sub renderProd(rows as Dynamic)
     for each it in rows
         m.prodByName[it.name] = it
     end for
-    ' Pinned items first (in pin order), even if nothing is making them right now
+    ' Pinned items first: manual pins (in pin order), then parts auto-pinned
+    ' from the milestone / Space Elevator panes. Shown even if nothing is
+    ' making them right now.
     view = []
-    for each name in m.pins
-        it = m.prodByName[name]
-        if it = invalid then it = { name: name, prod: 0.0, cons: 0.0, maxProd: 0.0, maxCons: 0.0, inactive: true }
-        view.push(it)
+    shown = {}
+    for each e in pinnedList()
+        if view.Count() < m.MAX_PINNED_ROWS
+            it = m.prodByName[e.name]
+            if it = invalid then it = { name: e.name, prod: 0.0, cons: 0.0, maxProd: 0.0, maxCons: 0.0, inactive: true }
+            view.push({ it: it, auto: e.auto })
+            shown[e.name] = true
+        end if
+    end for
+    m.prodAuto = []
+    for i = 0 to view.Count() - 1
+        m.prodAuto.push(view[i].auto)
+        view[i] = view[i].it
     end for
     p = view.Count()
     rest = []
     for each it in rows
-        if pinIndex(it.name) < 0 then rest.push(it)
+        if shown[it.name] = invalid then rest.push(it)
     end for
     avail = m.PROD_ROWS - p
     maxOff = rest.Count() - avail
@@ -547,6 +597,9 @@ sub renderProd(rows as Dynamic)
     for i = 0 to m.PROD_ROWS - 1
         r = m.prodRows[i]
         r.pin.visible = i < p
+        if i < p
+            if m.prodAuto[i] = "" then r.pinMark.color = C.accent else r.pinMark.color = "0x5A9BD5FF"
+        end if
         if i < view.Count()
             it = view[i]
             r.name.text = it.name
@@ -568,6 +621,39 @@ end sub
 
 ' ================= Pinning =================
 
+' Everything pinned, in display order: { name, auto } where auto is ""
+' for a manual pin, else "milestone" or "elevator". No duplicates.
+function pinnedList() as Object
+    out = []
+    seen = {}
+    for each n in m.pins
+        if seen[n] = invalid
+            out.push({ name: n, auto: "" })
+            seen[n] = true
+        end if
+    end for
+    d = m.data
+    if d <> invalid
+        if m.autoMs and d.hub <> invalid and d.hub.active = true
+            for each c in d.hub.cost
+                if seen[c.name] = invalid
+                    out.push({ name: c.name, auto: "milestone" })
+                    seen[c.name] = true
+                end if
+            end for
+        end if
+        if m.autoSe and d.elevator <> invalid and d.elevator.full <> true
+            for each c in d.elevator.cost
+                if seen[c.name] = invalid
+                    out.push({ name: c.name, auto: "elevator" })
+                    seen[c.name] = true
+                end if
+            end for
+        end if
+    end if
+    return out
+end function
+
 function pinIndex(name as String) as Integer
     for i = 0 to m.pins.Count() - 1
         if m.pins[i] = name then return i
@@ -578,6 +664,10 @@ end function
 sub togglePin()
     it = m.prodView[m.focus.idx]
     if it = invalid then return
+    if m.focus.idx < m.prodPinned and m.prodAuto[m.focus.idx] <> ""
+        showToast("Auto-pinned from the " + autoWhere(m.prodAuto[m.focus.idx]) + ". Change in settings (*).")
+        return
+    end if
     i = pinIndex(it.name)
     if i >= 0
         m.pins.Delete(i)
@@ -589,13 +679,18 @@ sub togglePin()
         end if
         m.pins.push(it.name)
         showToast("Pinned " + it.name)
-        ' Follow the item to its new spot at the top
-        m.focus = targetById("pr_" + (m.pins.Count() - 1).ToStr())
+        ' Follow the item to its new spot at the top (if it fits)
+        if m.pins.Count() <= m.MAX_PINNED_ROWS then m.focus = targetById("pr_" + (m.pins.Count() - 1).ToStr())
     end if
     savePins()
     renderProd(m.data.prod)
     updateFocus()
 end sub
+
+function autoWhere(kind as String) as String
+    if kind = "milestone" then return "milestone"
+    return "Space Elevator"
+end function
 
 function loadPins() as Object
     sec = CreateObject("roRegistrySection", "dashboard")
@@ -841,7 +936,9 @@ function tipFor(t as Object) as Object
     if k = "prod"
         it = m.prodView[t.idx]
         rows = itemRows(it.name)
-        if pinIndex(it.name) >= 0
+        if t.idx < m.prodPinned and m.prodAuto[t.idx] <> ""
+            rows.push(["#AUTO-PINNED FROM THE " + UCase(autoWhere(m.prodAuto[t.idx])) + "  ·  * FOR SETTINGS", ""])
+        else if pinIndex(it.name) >= 0
             rows.push(["#PINNED  ·  OK TO UNPIN", ""])
         else if m.pins.Count() < m.MAX_PINS
             rows.push(["#OK TO PIN TO TOP", ""])

@@ -72,3 +72,15 @@ sub saveServer(url as String)
     sec.Write("server", url)
     sec.Flush()
 end sub
+
+' On/off settings, stored as "1" / "0". Missing means off.
+function loadFlag(key as String) as Boolean
+    sec = CreateObject("roRegistrySection", "dashboard")
+    return sec.Exists(key) and sec.Read(key) = "1"
+end function
+
+sub saveFlag(key as String, value as Boolean)
+    sec = CreateObject("roRegistrySection", "dashboard")
+    if value then sec.Write(key, "1") else sec.Write(key, "0")
+    sec.Flush()
+end sub

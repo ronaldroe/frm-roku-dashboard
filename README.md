@@ -21,7 +21,9 @@ Studios or the authors of Ficsit Remote Monitoring.
   bars are replaced by a "Ready to submit" banner and a chime plays.
 - **Factory:** machines running, idle and paused, average efficiency, and coupons.
 - **Production:** every item being made or used, in alphabetical order, with made, used
-  and net per minute and the total you have. Pin up to 5 items to the top.
+  and net per minute and the total you have. Pin up to 5 items to the top, and
+  optionally have the parts for your current milestone and Space Elevator phase
+  pinned automatically.
 - **Tooltips:** move around with the arrow keys to see more detail on anything,
   including the components a part needs, rough time to finish, where items are made,
   power use by machine type, and why idle machines are idle.
@@ -141,7 +143,8 @@ The app asks which server to use:
    from Step 2. Add `:port` only if you changed it from 8080.
 3. Choose **Connect**. The app tests the connection, then opens the dashboard.
 
-The app remembers the address. To change it later, press `*` on the remote.
+The app remembers the address. To change it later, press `*` on the remote and
+choose **Server**.
 
 ## Using the app
 
@@ -150,10 +153,26 @@ The app remembers the address. To change it later, press `*` on the remote.
 | Arrows | Move the highlight and show tooltips |
 | OK | Pin or unpin the highlighted production item (elsewhere: refresh now) |
 | Play/Pause | Preview the Space Elevator "ready" alert |
-| `*` (Options) | Server settings |
+| `*` (Options) | Settings |
 | Back | Hide the highlight; press again to exit |
 
 The highlight hides itself after 30 seconds without a key press.
+
+### Settings
+
+Press `*` to open the settings. Use the arrows to choose an option and OK to change it.
+
+| Setting | What it does |
+| --- | --- |
+| Server | Change the game PC's address, or search your network for it. |
+| Auto-pin milestone parts | Pins the parts of the milestone you're working on to the top of the production list. Off by default. |
+| Auto-pin Space Elevator parts | Pins the parts of the current Space Elevator phase to the top of the production list. Off by default. |
+
+Auto-pinned items appear after the items you pinned yourself and have a blue marker
+instead of an orange one. They change on their own when you pick a new milestone or
+the elevator moves to its next phase. An item that is both pinned by you and needed
+for a milestone or phase is listed once. Auto-pins don't count toward your 5 pins, but
+at most 10 rows are pinned in total so the rest of the list still scrolls.
 
 **Keeping it on screen:** Roku's screensaver can start while the dashboard is up. To
 stop that, go to **Settings → Theme → Screensaver** on the Roku and set the wait time
@@ -211,16 +230,17 @@ GitHub release with it attached. It asks before changing anything.
 
 ```
 roku-frm/
-  manifest                 App metadata, optional default server, refresh interval
-  source/main.brs          Entry point
-  components/MainScene.*   Layout, rendering, navigation, tooltips, pins
-  components/FetchTask.*   Background polling of the mod's API and data summaries
-  components/SetupScreen.* Server address entry, network search, connection test
-  components/ProbeTask.*   Connection test and local network scan
-  components/Common.brs    Shared helpers (HTTP, error messages, saved settings)
-  images/, sounds/         Icons, splash, elevator badge, chime
-deploy.sh                  Package and sideload to the Roku in .env
-release.sh                 Version, tag and publish a GitHub release
+  manifest                    App metadata, optional default server, refresh interval
+  source/main.brs             Entry point
+  components/MainScene.*      Layout, rendering, navigation, tooltips, pins
+  components/FetchTask.*      Background polling of the mod's API and data summaries
+  components/SettingsScreen.* Settings menu (server, auto-pin options)
+  components/SetupScreen.*    Server address entry, network search, connection test
+  components/ProbeTask.*      Connection test and local network scan
+  components/Common.brs       Shared helpers (HTTP, error messages, saved settings)
+  images/, sounds/            Icons, splash, elevator badge, chime
+deploy.sh                     Package and sideload to the Roku in .env
+release.sh                    Version, tag and publish a GitHub release
 ```
 
 ### Notes
@@ -230,8 +250,8 @@ release.sh                 Version, tag and publish a GitHub release
 - Some versions of the mod always report the pod's return countdown as `00:00:00`.
   When that happens, the app times the pod's trip itself and uses the last trip at the
   same tier to estimate the next one.
-- The server address, pinned items and pod trip times are saved on the Roku and
-  survive restarts.
+- The server address, settings, pinned items and pod trip times are saved on the
+  Roku and survive restarts.
 
 ## Support the project
 

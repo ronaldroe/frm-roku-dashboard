@@ -39,15 +39,17 @@ Each result carries `base` (the server URL it came from). `MainScene` drops resu
 
 **MainScene** builds the whole UI imperatively in `init()` (no XML layout) on a fixed 1920×1080 canvas. Key mechanisms:
 - **Focus/tooltips:** every navigable element is registered with `addTarget(id, x, y, w, h, kind, idx)`. `isEnabled` decides from current data whether a target can be focused. `findNeighbor` picks the next target geometrically for each arrow direction. `tipFor` builds tooltip content as `[key, value]` rows; a key starting with `#` renders as a section header, and an empty value lets the key span the full width.
-- **Production list:** `renderProd` builds `m.prodView` (pinned items in pin order, then the scrolling remainder at `m.prodOffset`). Row targets index into `m.prodView`, not the raw data.
+- **Production list:** `renderProd` builds `m.prodView`: the pinned section from `pinnedList()` (manual pins in pin order, then milestone parts, then Space Elevator parts when those auto-pin settings are on, deduplicated, capped at `MAX_PINNED_ROWS`), then the scrolling remainder at `m.prodOffset`. `m.prodAuto[i]` says whether pinned row `i` is manual (`""`) or auto (`"milestone"`/`"elevator"`); auto rows get a blue marker and can't be unpinned with OK. Row targets index into `m.prodView`, not the raw data.
 - **Space Elevator alert:** fires on the not-ready to ready transition only (`m.seWasReady`), never on first load.
 - **Pod status:** FRM's `ShipReturn` is broken in current mod versions (always `00:00:00`), so the app relies on `ShipDock` (true when docked). It times each trip itself in game time (paused time excluded) and stores the trip length per tier to estimate the next one. A non-zero `ShipReturn` still takes priority.
+
+**SettingsScreen** opens on `*`. It writes its on/off options straight to the registry with `saveFlag` and sets `finished` to `"server"` (MainScene then opens `SetupScreen`, and cancelling that returns to settings) or `"done"`. MainScene re-reads the flags on close. To add an option, add an entry to `m.toggles` in `SettingsScreen.init` and read it with `loadFlag`.
 
 **SetupScreen / ProbeTask:** `SetupScreen` handles entering an address (`StandardKeyboardDialog`), searching the network and connecting. `ProbeTask` tests one URL, or scans the Roku's /24 subnet in batches of 32 with a 1.5 s cutoff, falling back to port 8080. `SetupScreen.finished` returns either a URL or `"cancel"`.
 
 **Common.brs** holds the shared helpers (HTTP with timeout, error classification and messages, address normalization, saved server). Each component compiles separately, so every component that uses these helpers must include `Common.brs` with its own `<script>` tag. Any function defined in `Common.brs` must not also be defined in a component's `.brs` file.
 
-**Persisted state** is in the registry section `dashboard`: `server`, `pins` (JSON array of item names, max 5), `podTrip_<tier>`.
+**Persisted state** is in the registry section `dashboard`: `server`, `pins` (JSON array of item names, max 5), `podTrip_<tier>`, and the settings flags `autoPinMilestone` / `autoPinElevator` (`"1"`/`"0"`, missing = off).
 
 ## BrightScript gotchas hit in this codebase
 
